@@ -37,6 +37,11 @@ const driverRoutes = require('./routes/driverRoutes');
 app.use('/api/rides', rideRoutes);
 app.use('/api/drivers', driverRoutes);
 
+// Root route for testing
+app.get('/', (req, res) => {
+  res.send('Welcome to the Fare Backend API!');
+});
+
 // Serve the React frontend build in production
 if (process.env.NODE_ENV === 'production') {
   const buildPath = path.join(__dirname, '../frontend/build');
@@ -59,10 +64,7 @@ mongoose
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// Add a root route for testing
-app.get('/', (req, res) => {
-  res.send('Welcome to the Fare Backend API!');
-});
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
