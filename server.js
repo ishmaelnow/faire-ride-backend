@@ -23,7 +23,7 @@ app.use(
         scriptSrc: ["'self'"], // Allow scripts from the same origin
         styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles (Bootstrap requires this)
         fontSrc: ["'self'", "https:"], // Allow fonts from the same origin and HTTPS
-        connectSrc: ["'self'", "https://your-heroku-app.herokuapp.com"], // Allow API connections
+        connectSrc: ["'self'", "https://fare-backend-72dcc5cb3edd.herokuapp.com"], // Allow API connections
       },
     },
   })
@@ -37,23 +37,13 @@ const driverRoutes = require('./routes/driverRoutes');
 app.use('/api/rides', rideRoutes);
 app.use('/api/drivers', driverRoutes);
 
-// Root route for testing
+// Serve static files from the public folder (e.g., favicon.ico)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve the custom index.html file for the root route
 app.get('/', (req, res) => {
-  res.send('Welcome to the Fare Backend API!');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Serve the React frontend build in production
-if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '../frontend/build');
-  app.use(express.static(buildPath));
-
-  // Handle React routing by sending `index.html` for any unknown routes
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(buildPath, 'index.html'));
-  });
-} else {
-  console.log('Running in development mode');
-}
 
 // Connect to MongoDB
 mongoose
@@ -63,8 +53,6 @@ mongoose
   })
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
-
-
 
 // Start the server
 const PORT = process.env.PORT || 5000;
