@@ -3,6 +3,7 @@ const express = require('express'); // For creating the server
 const mongoose = require('mongoose'); // For MongoDB connection
 const dotenv = require('dotenv'); // For loading environment variables
 const cors = require('cors'); // For handling CORS
+const helmet = require('helmet'); // For setting security headers
 
 // Load environment variables
 dotenv.config();
@@ -11,6 +12,22 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json()); // Middleware for parsing JSON requests
+
+// Configure helmet to allow specific resources
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"], // Allow images from the same origin, data URIs, and HTTPS
+        scriptSrc: ["'self'"], // Allow scripts from the same origin
+        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles (Bootstrap requires this)
+        fontSrc: ["'self'", "https:"], // Allow fonts from the same origin and HTTPS
+        connectSrc: ["'self'", "https://your-heroku-app.herokuapp.com"], // Allow API connections
+      },
+    },
+  })
+);
 
 // Import API routes
 const rideRoutes = require('./routes/rideRoutes');
@@ -42,7 +59,7 @@ mongoose
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// Add a simple root route for testing
+// Add a root route for testing
 app.get('/', (req, res) => {
   res.send('Welcome to the Fare Backend API!');
 });
