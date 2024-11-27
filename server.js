@@ -32,10 +32,12 @@ app.use(
 // Import API routes
 const rideRoutes = require('./routes/rideRoutes');
 const driverRoutes = require('./routes/driverRoutes');
+const adminRoutes = require('./routes/adminRoutes'); // Import admin routes
 
 // Prefix API routes
 app.use('/api/rides', rideRoutes);
 app.use('/api/drivers', driverRoutes);
+app.use('/api/admin', adminRoutes); // Prefix for admin routes
 
 // Serve static files from the public folder (e.g., favicon.ico)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -47,10 +49,7 @@ app.get('/', (req, res) => {
 
 // Connect to MongoDB
 mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
