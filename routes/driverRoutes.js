@@ -5,11 +5,22 @@ const Driver = require('../models/Driver');
 // Fetch all drivers
 router.get('/', async (req, res) => {
   try {
-    const drivers = await Driver.find({ isAvailable: true });
+    const drivers = await Driver.find(); // Fetch all drivers
     res.status(200).json(drivers);
   } catch (err) {
-    console.error('Error fetching drivers:', err.message);
+    console.error('Error fetching all drivers:', err.message);
     res.status(500).json({ error: 'Could not fetch drivers. Please try again later.' });
+  }
+});
+
+// Fetch only available drivers
+router.get('/available', async (req, res) => {
+  try {
+    const drivers = await Driver.find({ isAvailable: true }); // Fetch only available drivers
+    res.status(200).json(drivers);
+  } catch (err) {
+    console.error('Error fetching available drivers:', err.message);
+    res.status(500).json({ error: 'Could not fetch available drivers. Please try again later.' });
   }
 });
 

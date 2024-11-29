@@ -4,16 +4,22 @@ const mongoose = require('mongoose'); // For MongoDB connection
 const dotenv = require('dotenv'); // For loading environment variables
 const cors = require('cors'); // For handling CORS
 const helmet = require('helmet'); // For setting security headers
+const rateLimit = require('express-rate-limit'); // For limiting repeated requests
+const xss = require('xss-clean'); // For sanitizing user inputs
 
 // Load environment variables
 dotenv.config();
 
 // Initialize the app
 const app = express();
-app.use(cors());
-app.use(express.json()); // Middleware for parsing JSON requests
 
-// Configure helmet to allow specific resources
+// Middleware for parsing JSON requests
+app.use(express.json());
+
+// Middleware to handle CORS
+app.use(cors());
+
+// Configure Helmet for security headers
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -28,6 +34,17 @@ app.use(
     },
   })
 );
+
+// Protect against XSS attacks
+app.use(xss());
+
+// Apply rate limiting to all requests
+const limiter = rateLimit({
+  windowMs: 25 * 60 * 1000, // 15-minute window
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes.',
+});
+app.use(limiter);
 
 // Import API routes
 const rideRoutes = require('./routes/rideRoutes');
@@ -52,6 +69,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
