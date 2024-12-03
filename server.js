@@ -16,34 +16,25 @@ const app = express();
 // Middleware for parsing JSON requests
 app.use(express.json());
 
-// CORS configuration
-const publicRoutes = ['/api/rides']; // List of public routes
-const privateRoutes = ['/api/rides/admin-register', '/api/drivers', '/api/auth/login']; // Restricted routes
+// Configure CORS
 const allowedOrigins = [
+  'https://inquisitive-blancmange-95431a.netlify.app', // Production frontend
   'http://localhost:3000', // Local development
-  'https://your-frontend-domain.com', // Production frontend
 ];
 
-app.use((req, res, next) => {
-  if (publicRoutes.includes(req.path)) {
-    // Allow all origins for public routes
-    cors()(req, res, next);
-  } else if (privateRoutes.includes(req.path)) {
-    // Restrict origins for private routes
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
-    })(req, res, next);
-  } else {
-    // Proceed to the next middleware if the route is not explicitly listed
-    next();
-  }
-});
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Allow credentials (e.g., cookies, authorization headers)
+};
+
+// Apply CORS middleware globally
+app.use(cors(corsOptions));
 
 // Configure Helmet for security headers
 app.use(
