@@ -1,9 +1,45 @@
 const express = require('express');
-const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Ride = require('../models/Ride');
+const User = require('../models/User'); // Import User model
+const authMiddleware = require('../middleware/authMiddleware'); // Import authMiddleware
 
-// Fetch all rides
-router.get('/', async (req, res) => {
+const router = express.Router();
+
+// Secret for signing JWT tokens
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
+
+// New admin registration route (Protected by authMiddleware)
+router.post('/admin-register', authMiddleware, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    // Check if the user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists.' });
+    }
+
+    // Hash the password and save the user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ email, password: hashedPassword, role: 'admin' }); // Mark as 'admin'
+    await newUser.save();
+
+    res.status(201).json({ message: 'Admin registered successfully.' });
+  } catch (error) {
+    console.error('Error registering admin:', error.message);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// Fetch all rides (Protected by authMiddleware)
+router.get('/', authMiddleware, async (req, res) => {
   try {
     const rides = await Ride.find();
     res.status(200).json(rides);
@@ -13,8 +49,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Fetch a single ride by ID
-router.get('/:id', async (req, res) => {
+// Fetch a single ride by ID (Protected by authMiddleware)
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.id);
     if (!ride) {
@@ -27,7 +63,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Book a new ride
+// Book a new ride (Unprotected - Guest booking allowed)
 router.post('/', async (req, res) => {
   try {
     const { customerName, phone, email, pickupLocation, dropoffLocation, pickupTime } = req.body;
@@ -46,8 +82,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Assign a driver to a ride
-router.put('/:id/assign-driver', async (req, res) => {
+// Assign a driver to a ride (Admin only, Protected)
+router.put('/:id/assign-driver', authMiddleware, async (req, res) => {
   try {
     const { driverName } = req.body;
 
@@ -68,12 +104,12 @@ router.put('/:id/assign-driver', async (req, res) => {
     res.status(200).json(ride);
   } catch (err) {
     console.error('Error assigning driver:', err.message);
-    res.status(500).json({ error: 'Failed to assign driver. Please try again later.' });
+    res.status(500).json({ error: 'Failed to assign driver.' });
   }
 });
 
-// Update ride status
-router.put('/:id/status', async (req, res) => {
+// Update ride status (Admin only, Protected)
+router.put('/:id/status', authMiddleware, async (req, res) => {
   try {
     const { status } = req.body;
 

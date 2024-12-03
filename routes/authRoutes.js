@@ -1,50 +1,64 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const User = require('../models/User'); // Use your existing User model
 const router = express.Router();
 
-// Register a new user
+// Secret for signing JWT tokens
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
+
+// Register an admin user
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ email, password: hashedPassword });
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    // Check if the user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists.' });
+    }
+
+    // Create a new admin user
+    const user = new User({ email, password, role: 'admin' }); // Mark as 'admin'
+    await user.save();
+
+    res.status(201).json({ message: 'Admin registered successfully.' });
   } catch (error) {
-    res.status(500).json({ error: 'Registration failed' });
+    console.error('Error registering admin:', error.message);
+    res.status(500).json({ error: 'Registration failed.' });
   }
 });
 
-// Login user
+// Login an admin user
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
     }
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token });
+
+    // Find the user by email
+    const user = await User.findOne({ email, role: 'admin' }); // Ensure only admin users can log in here
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign({ userId: user._id, email: user.email, role: user.role }, JWT_SECRET, {
+      expiresIn: '1h', // Token expires in 1 hour
+    });
+    res.status(200).json({ token });
   } catch (error) {
-    res.status(500).json({ error: 'Login failed' });
+    console.error('Error logging in:', error.message);
+    res.status(500).json({ error: 'Login failed.' });
   }
 });
 
-// Middleware to protect routes
-const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ error: 'Access denied' });
-  }
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
-    next();
-  } catch {
-    res.status(400).json({ error: 'Invalid token' });
-  }
-};
-
-module.exports = { router, authMiddleware };
+module.exports = router;

@@ -16,8 +16,34 @@ const app = express();
 // Middleware for parsing JSON requests
 app.use(express.json());
 
-// Middleware to handle CORS
-app.use(cors());
+// CORS configuration
+const publicRoutes = ['/api/rides']; // List of public routes
+const privateRoutes = ['/api/rides/admin-register', '/api/drivers', '/api/auth/login']; // Restricted routes
+const allowedOrigins = [
+  'http://localhost:3000', // Local development
+  'https://your-frontend-domain.com', // Production frontend
+];
+
+app.use((req, res, next) => {
+  if (publicRoutes.includes(req.path)) {
+    // Allow all origins for public routes
+    cors()(req, res, next);
+  } else if (privateRoutes.includes(req.path)) {
+    // Restrict origins for private routes
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+    })(req, res, next);
+  } else {
+    // Proceed to the next middleware if the route is not explicitly listed
+    next();
+  }
+});
 
 // Configure Helmet for security headers
 app.use(
@@ -25,11 +51,11 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"], // Allow images from the same origin, data URIs, and HTTPS
-        scriptSrc: ["'self'"], // Allow scripts from the same origin
-        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles (Bootstrap requires this)
-        fontSrc: ["'self'", "https:"], // Allow fonts from the same origin and HTTPS
-        connectSrc: ["'self'", "https://fare-backend-72dcc5cb3edd.herokuapp.com"], // Allow API connections
+        imgSrc: ["'self'", "data:", "https:"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", "https:"],
+        connectSrc: ["'self'", "https://fare-backend-72dcc5cb3edd.herokuapp.com"],
       },
     },
   })
@@ -40,21 +66,24 @@ app.use(xss());
 
 // Apply rate limiting to all requests
 const limiter = rateLimit({
-  windowMs: 25 * 60 * 1000, // 15-minute window
+  windowMs: 15 * 60 * 1000, // 15-minute window
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again after 15 minutes.',
 });
 app.use(limiter);
 
 // Import API routes
-const rideRoutes = require('./routes/rideRoutes');
-const driverRoutes = require('./routes/driverRoutes');
-const adminRoutes = require('./routes/adminRoutes'); // Import admin routes
+const authRoutes = require('./routes/authRoutes'); // Authentication routes
+const rideRoutes = require('./routes/rideRoutes'); // Ride routes
+const driverRoutes = require('./routes/driverRoutes'); // Driver routes
+const adminRoutes = require('./routes/adminRoutes'); // Admin routes
+const authMiddleware = require('./middleware/authMiddleware'); // Authentication middleware
 
 // Prefix API routes
-app.use('/api/rides', rideRoutes);
-app.use('/api/drivers', driverRoutes);
-app.use('/api/admin', adminRoutes); // Prefix for admin routes
+app.use('/api/auth', authRoutes); // Authentication routes
+app.use('/api/rides', rideRoutes); // Public booking routes
+app.use('/api/drivers', authMiddleware, driverRoutes); // Protect drivers with authMiddleware
+app.use('/api/admin', authMiddleware, adminRoutes); // Protect admin routes with authMiddleware
 
 // Serve static files from the public folder (e.g., favicon.ico)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -66,10 +95,9 @@ app.get('/', (req, res) => {
 
 // Connect to MongoDB
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB Connected'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
-
 
 // Start the server
 const PORT = process.env.PORT || 5000;

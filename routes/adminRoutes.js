@@ -1,55 +1,71 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User'); // Import User model
 const router = express.Router();
-const Ride = require('../models/Ride');
-const Driver = require('../models/Driver');
 
-// Middleware for basic admin authentication
-const authenticateAdmin = (req, res, next) => {
-  const adminPassword = req.headers['x-admin-password'];
-  if (adminPassword === 'admin123') {
-    next(); // Allow access
-  } else {
-    res.status(403).json({ error: 'Unauthorized access' });
-  }
-};
-
-// Fetch all rides (Admin only)
-router.get('/rides', authenticateAdmin, async (req, res) => {
+// POST: Register an admin
+router.post('/register', async (req, res) => {
   try {
-    const rides = await Ride.find();
-    res.status(200).json(rides);
-  } catch (err) {
-    console.error('Error fetching rides:', err.message);
-    res.status(500).json({ error: 'Could not fetch rides. Please try again later.' });
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    // Check if the admin already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists.' });
+    }
+
+    // Hash the password and create the admin
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ email, password: hashedPassword, role: 'admin' }); // Assign admin role
+    await newUser.save();
+
+    res.status(201).json({ message: 'Admin registered successfully.' });
+  } catch (error) {
+    console.error('Error registering admin:', error.message);
+    res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
-// Assign a driver to a ride (Admin only)
-router.put('/rides/:id/assign-driver', authenticateAdmin, async (req, res) => {
+// POST: Login as admin
+router.post('/login', async (req, res) => {
   try {
-    const { driverName } = req.body;
+    const { email, password } = req.body;
 
-    // Validate driver details
-    if (!driverName) {
-      return res.status(400).json({ error: 'Driver name is required.' });
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    // Check if the driver exists
-    const driver = await Driver.findOne({ name: driverName });
-    if (!driver) {
-      return res.status(404).json({ error: 'Driver not found.' });
+    // Check if the user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    // Assign the driver to the ride
-    const ride = await Ride.findByIdAndUpdate(req.params.id, { driverName: driver.name }, { new: true });
-    if (!ride) {
-      return res.status(404).json({ error: 'Ride not found.' });
+    // Check if the password is correct
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    res.status(200).json({ ride, driver });
-  } catch (err) {
-    console.error('Error assigning driver:', err.message);
-    res.status(500).json({ error: 'Failed to assign driver.' });
+    // Ensure the user is an admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied. Admins only.' });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.json({ token });
+  } catch (error) {
+    console.error('Error logging in:', error.message);
+    res.status(500).json({ error: 'Internal server error.' });
   }
 });
 
