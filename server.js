@@ -16,6 +16,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add this debug route to check NODE_ENV
+app.get('/env', (req, res) => {
+  res.json({ node_env: process.env.NODE_ENV });
+});
+
 // CORS Configuration
 const allowedOrigins = [
   'https://inquisitive-blancmange-95431a.netlify.app', // Frontend production URL
