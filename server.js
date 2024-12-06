@@ -9,7 +9,7 @@ const driverRoutes = require('./routes/driverRoutes');
 
 const app = express();
 
-// Middleware: Logging for Debugging
+// Debugging Middleware for Logging Requests
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
@@ -22,21 +22,20 @@ const allowedOrigins = [
   'http://localhost:3000', // Local development frontend URL
 ];
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or Postman) or from allowed origins
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS policy: This origin is not allowed.'));
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
-  credentials: true, // Include credentials in requests
-};
-
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true); // Allow requests from allowed origins
+      } else {
+        callback(new Error('CORS policy: This origin is not allowed.'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+    credentials: true, // Allow credentials like cookies
+  })
+);
 
 // Middleware: Parse JSON bodies
 app.use(bodyParser.json());
