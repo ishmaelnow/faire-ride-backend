@@ -9,25 +9,34 @@ const driverRoutes = require('./routes/driverRoutes');
 
 const app = express();
 
-// Debugging Middleware for Logging Requests
+// Middleware: Logging for Debugging
 app.use((req, res, next) => {
   console.log(`Incoming request: ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
   next();
 });
 
-// Middleware: CORS Configuration
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow all origins for now, but restrict in production if needed
+// CORS Configuration
+const allowedOrigins = [
+  'https://inquisitive-blancmange-95431a.netlify.app', // Frontend production URL
+  'http://localhost:3000', // Local development frontend URL
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or Postman) or from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
-    credentials: true, // Allow credentials like cookies
-  })
-);
+    } else {
+      callback(new Error('CORS policy: This origin is not allowed.'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  credentials: true, // Include credentials in requests
+};
+
+app.use(cors(corsOptions));
 
 // Middleware: Parse JSON bodies
 app.use(bodyParser.json());
