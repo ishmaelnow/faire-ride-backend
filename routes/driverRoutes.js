@@ -2,70 +2,40 @@ const express = require('express');
 const router = express.Router();
 const Driver = require('../models/Driver');
 
-// Fetch all drivers
+// Get all drivers
 router.get('/', async (req, res) => {
   try {
-    const drivers = await Driver.find(); // Fetch all drivers
+    const drivers = await Driver.find();
     res.status(200).json(drivers);
-  } catch (err) {
-    console.error('Error fetching all drivers:', err.message);
-    res.status(500).json({ error: 'Could not fetch drivers. Please try again later.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching drivers', error: error.message });
   }
 });
 
-// Fetch only available drivers
-router.get('/available', async (req, res) => {
-  try {
-    const drivers = await Driver.find({ isAvailable: true }); // Fetch only available drivers
-    res.status(200).json(drivers);
-  } catch (err) {
-    console.error('Error fetching available drivers:', err.message);
-    res.status(500).json({ error: 'Could not fetch available drivers. Please try again later.' });
-  }
-});
-
-// Add a new driver
+// Create a new driver
 router.post('/', async (req, res) => {
+  const { name, email, phone } = req.body;
+
   try {
-    const { name, phone, email } = req.body;
-
-    if (!name || !phone || !email) {
-      return res.status(400).json({ error: 'Name, phone, and email are required.' });
-    }
-
-    const newDriver = new Driver({ name, phone, email });
-    const savedDriver = await newDriver.save();
-
-    res.status(201).json(savedDriver);
-  } catch (err) {
-    console.error('Error adding driver:', err.message);
-    res.status(500).json({ error: 'Failed to add driver.' });
+    const newDriver = new Driver({ name, email, phone });
+    await newDriver.save();
+    res.status(201).json(newDriver);
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating driver', error: error.message });
   }
 });
 
 // Update driver availability
 router.put('/:id/availability', async (req, res) => {
   try {
-    const { isAvailable } = req.body;
-
-    if (typeof isAvailable !== 'boolean') {
-      return res.status(400).json({ error: 'Invalid availability value.' });
-    }
-
     const driver = await Driver.findByIdAndUpdate(
       req.params.id,
-      { isAvailable },
+      { isAvailable: req.body.isAvailable },
       { new: true }
     );
-
-    if (!driver) {
-      return res.status(404).json({ error: 'Driver not found.' });
-    }
-
     res.status(200).json(driver);
-  } catch (err) {
-    console.error('Error updating driver availability:', err.message);
-    res.status(500).json({ error: 'Failed to update driver availability.' });
+  } catch (error) {
+    res.status(400).json({ message: 'Error updating availability', error: error.message });
   }
 });
 

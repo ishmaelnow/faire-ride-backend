@@ -1,10 +1,9 @@
 const mongoose = require('mongoose');
 
-const DriverSchema = new mongoose.Schema({
+const driverSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  phone: { type: String, required: true },
   email: { type: String, required: true },
-  isAvailable: { type: Boolean, default: true },
+  phone: { type: String, required: true },
 });
 
-module.exports = mongoose.model('Driver', DriverSchema);
+module.exports = mongoose.model('Driver', driverSchema);
