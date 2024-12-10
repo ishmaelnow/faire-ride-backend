@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Ride = require('../models/Ride');
 
-// Get all rides
+// GET: Fetch all rides (Admin only)
 router.get('/', async (req, res) => {
   try {
     const rides = await Ride.find();
@@ -12,28 +12,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Create a new ride
-router.post('/', async (req, res) => {
-  const { name, phone, email, pickupLocation, dropoffLocation, pickupTime, dropoffTime } = req.body;
-
-  try {
-    const newRide = new Ride({
-      name,
-      phone,
-      email,
-      pickupLocation,
-      dropoffLocation,
-      pickupTime,
-      dropoffTime
-    });
-    await newRide.save();
-    res.status(201).json(newRide);
-  } catch (error) {
-    res.status(500).json({ message: 'Error creating ride', error: error.message });
-  }
-});
-
-// Assign a driver to a ride
+// PUT: Assign a driver to a ride (Admin only)
 router.put('/:id/assign-driver', async (req, res) => {
   try {
     const ride = await Ride.findByIdAndUpdate(
@@ -47,7 +26,7 @@ router.put('/:id/assign-driver', async (req, res) => {
   }
 });
 
-// Update ride status
+// PUT: Update ride status (Admin only)
 router.put('/:id/status', async (req, res) => {
   try {
     const ride = await Ride.findByIdAndUpdate(
